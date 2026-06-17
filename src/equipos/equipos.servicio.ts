@@ -11,10 +11,10 @@ import { FiltrarEquiposDto } from './dto/filtrar-equipo.dto';
 import { CambiarEstadoDto } from './dto/cambiar-estado.dto';
 
 @Injectable()
-export class EquiposService {
+export class EquipoServicio {
   constructor(private readonly prisma: PrismaService) {}
 
-  async crearEquipo(dto: CrearEquipoDto) {
+  async crear(dto: CrearEquipoDto) {
     // Verificar código interno único antes de intentar insertar
     const equipoExistente = await this.prisma.equipo.findUnique({
       where: { codigoInterno: dto.codigoInterno },
@@ -104,7 +104,7 @@ export class EquiposService {
     return equipo;
   }
 
-  async actualizarEquipo(id: string, dto: ActualizarEquipoDto) {
+  async actualizar(id: string, dto: ActualizarEquipoDto) {
     // Esto lanza NotFoundException si no existe — no necesitamos repetir la lógica
     await this.obtenerPorId(id);
 

@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { EquiposController } from './equipos.controlador';
-import { EquiposService } from './equipos.servicio';
+import { EquipoControlador } from './equipos.controlador';
+import { EquipoServicio } from './equipos.servicio';
 
 @Module({
-  controllers: [EquiposController],
-  providers: [EquiposService],
-  exports: [EquiposService],
+  controllers: [EquipoControlador],
+  providers: [EquipoServicio],
+  exports: [EquipoServicio],
 })
-export class EquiposModule {}
+export class EquipoModulo {}

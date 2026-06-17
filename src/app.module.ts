@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from '../prisma/prisma.module';
-import { EquiposModule } from './equipos/equipos.modulo';
+import { EquipoModulo } from './equipos/equipos.modulo';
+import { UsuarioModulo } from './usuarios/usuarios.modulo';
+
 @Module({
   imports: [
     // ConfigModule global → process.env disponible en toda la app
@@ -9,7 +11,8 @@ import { EquiposModule } from './equipos/equipos.modulo';
       isGlobal: true,
     }),
     PrismaModule,
-    EquiposModule,
+    EquipoModulo,
+    UsuarioModulo,
   ],
 })
 export class AppModule {}
