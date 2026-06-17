@@ -99,8 +99,9 @@ model Equipo {
   observaciones           String?
 
   // Calibración — se actualiza automáticamente al registrar una nueva
-  fechaUltimaCalibración  DateTime?
-  vencimientoCalibración  DateTime?
+  fechaUltimaCalibracion  DateTime?
+  vencimientoCalibracion  DateTime?
+
 
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
