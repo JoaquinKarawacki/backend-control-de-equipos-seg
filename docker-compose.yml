@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: control-equipos-postgres
+    environment:
+      POSTGRES_USER: seg
+      POSTGRES_PASSWORD: seg123
+      POSTGRES_DB: control_equipos
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

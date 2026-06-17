@@ -1,0 +1,221 @@
+generator client {
+  provider        = "prisma-client-js"
+moduleFormat    = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum RolUsuario {
+  ADMIN
+  TECNICO
+  SOLO_LECTURA
+}
+
+enum EstadoEquipo {
+  DISPONIBLE
+  RESERVADO
+  EN_USO
+  EN_CALIBRACION
+  FUERA_DE_SERVICIO
+  DAÑADO
+  EXTRAVIADO
+}
+
+enum CriticidadEquipo {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+enum EstadoReserva {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+}
+
+enum TipoMovimiento {
+  RETIRO
+  DEVOLUCION
+  ENVIO_CALIBRACION
+  RETORNO_CALIBRACION
+}
+
+enum TipoDocumento {
+  CERTIFICADO_CALIBRACION
+  FOTO
+  MANUAL
+  OTRO
+}
+
+enum TipoAlerta {
+  CALIBRACION_POR_VENCER
+  CALIBRACION_VENCIDA
+  DEVOLUCION_ATRASADA
+  EQUIPO_DAÑADO
+  EQUIPO_CRITICO_INDISPONIBLE
+}
+
+// ─────────────────────────────────────────────
+// MODELOS
+// ─────────────────────────────────────────────
+
+model Usuario {
+  id          String      @id @default(cuid())
+  nombre      String
+  apellido    String
+  email       String      @unique
+  contrasena  String
+  rol         RolUsuario  @default(TECNICO)
+  activo      Boolean     @default(true)
+  creadoEn    DateTime    @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  // Relaciones
+  reservas            Reserva[]
+  movimientos         MovimientoEquipo[]
+  documentosSubidos   Documento[]
+  calibracionesRegistradas Calibracion[]
+
+  @@map("usuarios")
+}
+
+model Equipo {
+  id                      String           @id @default(cuid())
+  codigoInterno           String           @unique
+  descripcion             String
+  marca                   String
+  modelo                  String
+  numeroDeSerie           String?
+  ubicacion               String?
+  estado                  EstadoEquipo     @default(DISPONIBLE)
+  criticidad              CriticidadEquipo @default(MEDIA)
+  observaciones           String?
+
+  // Calibración — se actualiza automáticamente al registrar una nueva
+  fechaUltimaCalibración  DateTime?
+  vencimientoCalibración  DateTime?
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  reservas     Reserva[]
+  movimientos  MovimientoEquipo[]
+  calibraciones Calibracion[]
+  documentos   Documento[]
+  alertas      Alerta[]
+
+  @@map("equipos")
+}
+
+model Reserva {
+  id           String        @id @default(cuid())
+  estado       EstadoReserva @default(PENDIENTE)
+  fechaDesde   DateTime
+  fechaHasta   DateTime
+  proyecto     String?
+  observaciones String?
+  creadoEn     DateTime      @default(now())
+  actualizadoEn DateTime     @updatedAt
+
+  // Relaciones
+  equipoId  String
+  equipo    Equipo  @relation(fields: [equipoId], references: [id])
+
+  tecnicoId String
+  tecnico   Usuario @relation(fields: [tecnicoId], references: [id])
+
+  // Un retiro puede estar asociado a una reserva previa (opcional)
+  movimientos MovimientoEquipo[]
+
+  @@map("reservas")
+}
+
+model MovimientoEquipo {
+  id                String         @id @default(cuid())
+  tipo              TipoMovimiento
+  fecha             DateTime       @default(now())
+  proyectoAsociado  String?
+  observaciones     String?
+  creadoEn          DateTime       @default(now())
+
+  // Relaciones
+  equipoId  String
+  equipo    Equipo  @relation(fields: [equipoId], references: [id])
+
+  tecnicoId String
+  tecnico   Usuario @relation(fields: [tecnicoId], references: [id])
+
+  // Opcional — si el movimiento provino de una reserva
+  reservaId String?
+  reserva   Reserva? @relation(fields: [reservaId], references: [id])
+
+  @@map("movimientos_equipo")
+}
+
+model Calibracion {
+  id               String   @id @default(cuid())
+  fechaRealizada   DateTime
+  fechaVencimiento DateTime
+  laboratorio      String?
+  numeroCertificado String?
+  observaciones    String?
+  creadoEn         DateTime @default(now())
+  actualizadoEn    DateTime @updatedAt
+
+  // Relaciones
+  equipoId String
+  equipo   Equipo  @relation(fields: [equipoId], references: [id])
+
+  // Quién registró esta calibración en el sistema
+  registradaPorId String?
+  registradaPor   Usuario? @relation(fields: [registradaPorId], references: [id])
+
+  documentos Documento[]
+
+  @@map("calibraciones")
+}
+
+model Documento {
+  id          String        @id @default(cuid())
+  nombre      String
+  tipo        TipoDocumento
+  urlArchivo  String        // URL en Cloudflare R2
+  tamanoBytes Int?
+  creadoEn    DateTime      @default(now())
+
+  // Relaciones
+  equipoId String
+  equipo   Equipo @relation(fields: [equipoId], references: [id])
+
+  // Opcional — si el documento es el certificado de una calibración específica
+  calibracionId String?
+  calibracion   Calibracion? @relation(fields: [calibracionId], references: [id])
+
+  subidoPorId String
+  subidoPor   Usuario @relation(fields: [subidoPorId], references: [id])
+
+  @@map("documentos")
+}
+
+model Alerta {
+  id       String     @id @default(cuid())
+  tipo     TipoAlerta
+  mensaje  String
+  leida    Boolean    @default(false)
+  resuelta Boolean    @default(false)
+  creadoEn DateTime   @default(now())
+
+  // Relaciones
+  equipoId String
+  equipo   Equipo @relation(fields: [equipoId], references: [id])
+
+  @@map("alertas")
+}
