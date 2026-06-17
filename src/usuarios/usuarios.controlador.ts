@@ -10,6 +10,8 @@ import {
 import { CrearUsuarioDto } from './dto/crear-usuario.dto';
 import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 import { UsuarioServicio } from './usuarios.servicio';
+import { UseGuards } from '@nestjs/common';
+import { JwtGuardia } from '../auth/jwt.guardia';
 
 @Controller('usuarios')
 export class UsuarioControlador{
@@ -20,6 +22,7 @@ export class UsuarioControlador{
         return this.usuarioServicio.crear(dto);
     }
 
+    @UseGuards(JwtGuardia)
     @Get()
     obtenerTodos(){
         return this.usuarioServicio.obtenerTodos();
