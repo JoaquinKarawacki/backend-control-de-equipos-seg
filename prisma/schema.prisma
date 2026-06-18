@@ -168,6 +168,8 @@ model Calibracion {
   laboratorio      String?
   numeroCertificado String?
   observaciones    String?
+  anulada          Boolean  @default(false)
+  motivoAnulacion  String?
   creadoEn         DateTime @default(now())
   actualizadoEn    DateTime @updatedAt
 
