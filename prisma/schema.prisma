@@ -158,6 +158,9 @@ model MovimientoEquipo {
   reservaId String?
   reserva   Reserva? @relation(fields: [reservaId], references: [id])
 
+  estadoAnterior EstadoEquipo
+  estadoNuevo    EstadoEquipo
+
   @@map("movimientos_equipo")
 }
 

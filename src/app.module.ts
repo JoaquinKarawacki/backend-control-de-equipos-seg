@@ -6,6 +6,7 @@ import { UsuarioModulo } from './usuarios/usuarios.modulo';
 import { AuthModulo } from './auth/auth.modulo';
 import { ReservaModulo } from './reservas/reservas.modulo';
 import { CalibracionModulo } from './calibraciones/calibraciones.modulo';
+import { MovimientosModulo } from './movimientos/movimientos.modulo';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CalibracionModulo } from './calibraciones/calibraciones.modulo';
     AuthModulo,
     ReservaModulo,
     CalibracionModulo,
+    MovimientosModulo,
   ],
 })
 export class AppModule {}
