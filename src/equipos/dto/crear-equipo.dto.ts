@@ -4,6 +4,9 @@ import {
   IsOptional,
   IsEnum,
   IsDateString,
+  IsBoolean,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { CriticidadEquipo } from '@prisma/client';
 
@@ -40,8 +43,15 @@ export class CrearEquipoDto {
   @IsOptional()
   observaciones?: string;
 
-  // Las fechas viajan como string ISO desde el cliente (ej: "2025-03-15")
-  // y las convertimos a Date en el service
+  @IsBoolean()
+  @IsOptional()
+  requiereCalibracion?: boolean;
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  intervaloCalibracionDias?: number;
+
   @IsDateString()
   @IsOptional()
   fechaUltimaCalibracion?: string;

@@ -98,20 +98,21 @@ model Equipo {
   criticidad              CriticidadEquipo @default(MEDIA)
   observaciones           String?
 
-  // Calibración — se actualiza automáticamente al registrar una nueva
-  fechaUltimaCalibracion  DateTime?
-  vencimientoCalibracion  DateTime?
-
+  // Calibración
+  requiereCalibracion      Boolean   @default(false)
+  intervaloCalibracionDias Int?
+  fechaUltimaCalibracion   DateTime?
+  vencimientoCalibracion   DateTime?
 
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
   // Relaciones
-  reservas     Reserva[]
-  movimientos  MovimientoEquipo[]
+  reservas      Reserva[]
+  movimientos   MovimientoEquipo[]
   calibraciones Calibracion[]
-  documentos   Documento[]
-  alertas      Alerta[]
+  documentos    Documento[]
+  alertas       Alerta[]
 
   @@map("equipos")
 }

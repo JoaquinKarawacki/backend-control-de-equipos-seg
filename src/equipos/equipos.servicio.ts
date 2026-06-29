@@ -9,10 +9,15 @@ import { CrearEquipoDto } from './dto/crear-equipo.dto';
 import { ActualizarEquipoDto } from './dto/actualizar-equipo.dto';
 import { FiltrarEquiposDto } from './dto/filtrar-equipo.dto';
 import { CambiarEstadoDto } from './dto/cambiar-estado.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EVENTOS } from '../alertas/eventos/eventos.constantes';
+import { EventoEquipoEstadoCambiado } from '../alertas/eventos/eventos.tipos';
 
 @Injectable()
 export class EquipoServicio {
-  constructor(private readonly prisma: PrismaService) {}
+    constructor(
+    private readonly prisma: PrismaService,
+    private readonly emisorEventos: EventEmitter2) {}
 
   async crear(dto: CrearEquipoDto) {
     // Verificar código interno único antes de intentar insertar
@@ -138,16 +143,31 @@ export class EquipoServicio {
     });
   }
 
-  async cambiarEstado(id: string, dto: CambiarEstadoDto) {
-    await this.obtenerPorId(id);
+ async cambiarEstado(id: string, dto: CambiarEstadoDto) {
+    // Guardamos el equipo ANTES de cambiarlo: necesitamos el estado anterior
+    // y sus datos para el payload del evento.
+    const equipoAnterior = await this.obtenerPorId(id);
 
-    return this.prisma.equipo.update({
+    const equipoActualizado = await this.prisma.equipo.update({
       where: { id },
       data: {
         estado: dto.estado,
         ...(dto.observaciones && { observaciones: dto.observaciones }),
       },
     });
+
+    // El cambio ya está persistido. Recién ahora avisamos al resto del sistema.
+    const payload: EventoEquipoEstadoCambiado = {
+      equipoId: equipoActualizado.id,
+      codigoInterno: equipoActualizado.codigoInterno,
+      estadoAnterior: equipoAnterior.estado,
+      estadoNuevo: equipoActualizado.estado,
+      criticidad: equipoActualizado.criticidad,
+    };
+
+    this.emisorEventos.emit(EVENTOS.EQUIPO_ESTADO_CAMBIADO, payload);
+
+    return equipoActualizado;
   }
 
   async generarQR(id: string) {
