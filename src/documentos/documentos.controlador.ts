@@ -56,14 +56,19 @@ export class DocumentosControlador {
       },
     }),
   )
+
+  @Post()
+  @UseGuards(JwtGuardia)
+  @UseInterceptors(/* ...el FileInterceptor tal cual lo tenés... */)
   async subir(
     @UploadedFile() archivo: Express.Multer.File,
     @Body() dto: SubirDocumentoDto,
     @Req() req: any,
   ) {
-   
-    const subidoPorId = req.user.id;
-    return this.documentosServicio.subir(dto, archivo, subidoPorId);
+    return this.documentosServicio.subir(dto, archivo, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 
   @Get('equipo/:equipoId')
@@ -94,7 +99,10 @@ export class DocumentosControlador {
 
   @Delete(':id')
   @UseGuards(JwtGuardia)
-  async eliminar(@Param('id') id: string) {
-    return this.documentosServicio.eliminar(id);
+  async eliminar(@Param('id') id: string, @Req() req: any) {
+    return this.documentosServicio.eliminar(id, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 }

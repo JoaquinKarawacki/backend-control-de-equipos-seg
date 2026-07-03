@@ -226,3 +226,16 @@ model Alerta {
 
   @@map("alertas")
 }
+
+model Auditoria {
+  id            String   @id @default(cuid())
+  usuarioId     String?
+  usuarioEmail  String
+  accion        String
+  descripcion   String
+  entidad       String?
+  entidadId     String?
+  creadoEn      DateTime @default(now())
+
+  @@map("auditoria")
+}

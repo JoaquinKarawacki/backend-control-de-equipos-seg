@@ -6,7 +6,10 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
+import { JwtGuardia } from '../auth/jwt.guardia';
 import { CalibracionServicio } from './calibraciones.servicio';
 import { CrearCalibracionDto } from './dto/crear-calibracion.dto';
 
@@ -15,13 +18,21 @@ export class CalibracionControlador {
   constructor(private readonly calibracionServicio: CalibracionServicio) {}
 
   @Post()
-  crear(@Body() dto: CrearCalibracionDto) {
-    return this.calibracionServicio.crear(dto);
+  @UseGuards(JwtGuardia)
+  crear(@Body() dto: CrearCalibracionDto, @Req() req: any) {
+    return this.calibracionServicio.crear(dto, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 
   @Patch(':id/anular')
-  anular(@Param('id') id: string, @Body('motivo') motivo: string) {
-    return this.calibracionServicio.anular(id, motivo);
+  @UseGuards(JwtGuardia)
+  anular(@Param('id') id: string, @Body('motivo') motivo: string, @Req() req: any) {
+    return this.calibracionServicio.anular(id, motivo, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 
   @Get(':id')

@@ -8,6 +8,8 @@ import { RetiroEstrategia } from './estrategias/retiro.estrategia';
 import { DevolucionEstrategia } from './estrategias/devolucion.estrategia';
 import { EnvioCalibracionEstrategia } from './estrategias/envio-calibracion.estrategia';
 import { RetornoCalibracionEstrategia } from './estrategias/retorno-calibracion.estrategia';
+import { AuditoriaServicio, ACCIONES } from '../auditoria/auditoria.servicio';
+import { UsuarioActual } from '../comun/tipos/usuario-actual.tipo';
 
 @Injectable()
 export class MovimientosServicio {
@@ -19,6 +21,7 @@ export class MovimientosServicio {
     private readonly devolucionEstrategia: DevolucionEstrategia,
     private readonly envioCalibracionEstrategia: EnvioCalibracionEstrategia,
     private readonly retornoCalibracionEstrategia: RetornoCalibracionEstrategia,
+    private readonly auditoriaServicio: AuditoriaServicio,
   ) {
     this.estrategias = new Map<TipoMovimiento, MovimientoEstrategia>([
       [TipoMovimiento.RETIRO, this.retiroEstrategia],
@@ -28,12 +31,24 @@ export class MovimientosServicio {
     ]);
   }
 
-  async registrarMovimiento(dto: RegistrarMovimientoDto) {
+  async registrarMovimiento(dto: RegistrarMovimientoDto, usuario: UsuarioActual) {
     const estrategia = this.estrategias.get(dto.tipo);
     if (!estrategia) {
       throw new BadRequestException(`Tipo de movimiento "${dto.tipo}" no soportado`);
     }
-    return estrategia.ejecutar(dto);
+
+    const movimiento = await estrategia.ejecutar(dto);
+
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.REGISTRAR_MOVIMIENTO,
+      descripcion: `Registró un movimiento de tipo ${dto.tipo} sobre el equipo ${dto.equipoId}`,
+      entidad: 'MovimientoEquipo',
+      entidadId: movimiento.id,
+    });
+
+    return movimiento;
   }
 
   async obtenerTodos(filtros: FiltrarMovimientosDto) {

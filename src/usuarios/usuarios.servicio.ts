@@ -7,11 +7,16 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CrearUsuarioDto } from './dto/crear-usuario.dto';
 import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
+import { AuditoriaServicio, ACCIONES } from '../auditoria/auditoria.servicio';
+import { UsuarioActual } from '../comun/tipos/usuario-actual.tipo';
 
 @Injectable()
 export class UsuarioServicio{
-    constructor(private readonly prisma: PrismaService) {}
-    
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly auditoriaServicio: AuditoriaServicio,
+    ) {}
+
     async crear(dto: CrearUsuarioDto){
         const usuarioExistente = await this.prisma.usuario.findUnique({
             where : {email: dto.email}
@@ -29,8 +34,20 @@ export class UsuarioServicio{
                 contrasena: contrasenaHasheada,
             },
         });
+
+        // No hay usuario autenticado (endpoint sin guard todavía):
+        // se audita usando al propio usuario creado como actor.
+        await this.auditoriaServicio.registrar({
+            usuarioId: usuario.id,
+            usuarioEmail: usuario.email,
+            accion: ACCIONES.CREAR_USUARIO,
+            descripcion: `Se registró el usuario "${usuario.email}" (rol: ${usuario.rol})`,
+            entidad: 'Usuario',
+            entidadId: usuario.id,
+        });
+
         const { contrasena, ...usuarioSinContrasena } = usuario;
-        
+
         return usuarioSinContrasena;
     }
 
@@ -62,7 +79,7 @@ export class UsuarioServicio{
         return usuarioSinContrasena
     }
 
-    async actualizar(id: string, dto: ActualizarUsuarioDto){
+    async actualizar(id: string, dto: ActualizarUsuarioDto, usuario: UsuarioActual){
         await this.obtenerPorId(id);
 
         if(dto.email){
@@ -85,10 +102,21 @@ export class UsuarioServicio{
         if (dto.contrasena) {
         data.contrasena = await bcrypt.hash(dto.contrasena, 10);
         }
-        return await this.prisma.usuario.update({
+        const usuarioActualizado = await this.prisma.usuario.update({
             where : {id},
             data,
-        })
+        });
+
+        await this.auditoriaServicio.registrar({
+            usuarioId: usuario.id,
+            usuarioEmail: usuario.email,
+            accion: ACCIONES.EDITAR_USUARIO,
+            descripcion: `Editó el usuario "${usuarioActualizado.email}"`,
+            entidad: 'Usuario',
+            entidadId: usuarioActualizado.id,
+        });
+
+        return usuarioActualizado;
     }
 
 }

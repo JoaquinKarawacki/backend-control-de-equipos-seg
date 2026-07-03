@@ -6,7 +6,10 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
+import { JwtGuardia } from '../auth/jwt.guardia';
 import { ReservaServicio } from './reservas.servicio';
 import { CrearReservaDto } from './dto/crear-reserva.dto';
 import { EstadoReserva } from '@prisma/client';
@@ -16,18 +19,30 @@ export class ReservaControlador {
   constructor(private readonly reservaServicio: ReservaServicio) {}
 
   @Post()
-  crear(@Body() dto: CrearReservaDto) {
-    return this.reservaServicio.crear(dto);
+  @UseGuards(JwtGuardia)
+  crear(@Body() dto: CrearReservaDto, @Req() req: any) {
+    return this.reservaServicio.crear(dto, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 
   @Patch(':id/confirmar')
-  confirmar(@Param('id') id: string) {
-    return this.reservaServicio.confirmar(id);
+  @UseGuards(JwtGuardia)
+  confirmar(@Param('id') id: string, @Req() req: any) {
+    return this.reservaServicio.confirmar(id, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 
   @Patch(':id/cancelar')
-  cancelar(@Param('id') id: string) {
-    return this.reservaServicio.cancelar(id);
+  @UseGuards(JwtGuardia)
+  cancelar(@Param('id') id: string, @Req() req: any) {
+    return this.reservaServicio.cancelar(id, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 
   @Get(':id')

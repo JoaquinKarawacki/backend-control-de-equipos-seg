@@ -1,12 +1,8 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Body,
-  Param,
-  Query,
+  Controller, Get, Post, Patch, Body, Param, Query,
+  UseGuards, Req,
 } from '@nestjs/common';
+import { JwtGuardia } from '../auth/jwt.guardia';
 import { EquipoServicio } from './equipos.servicio';
 import { CrearEquipoDto } from './dto/crear-equipo.dto';
 import { ActualizarEquipoDto } from './dto/actualizar-equipo.dto';
@@ -18,8 +14,12 @@ export class EquipoControlador {
   constructor(private readonly equipoServicio: EquipoServicio) {}
 
   @Post()
-  crearEquipo(@Body() dto: CrearEquipoDto) {
-    return this.equipoServicio.crear(dto);
+  @UseGuards(JwtGuardia)
+  crearEquipo(@Body() dto: CrearEquipoDto, @Req() req: any) {
+    return this.equipoServicio.crear(dto, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 
   @Get()
@@ -41,12 +41,28 @@ export class EquipoControlador {
   }
 
   @Patch(':id')
-  actualizarEquipo(@Param('id') id: string, @Body() dto: ActualizarEquipoDto) {
-    return this.equipoServicio.actualizar(id, dto);
-  }
+  @UseGuards(JwtGuardia)
+    actualizarEquipo(
+      @Param('id') id: string,
+      @Body() dto: ActualizarEquipoDto,
+      @Req() req: any,
+    ) {
+      return this.equipoServicio.actualizar(id, dto, {
+        id: req.user.id,
+        email: req.user.email,
+      });
+    }
 
-  @Patch(':id/estado')
-  cambiarEstado(@Param('id') id: string, @Body() dto: CambiarEstadoDto) {
-    return this.equipoServicio.cambiarEstado(id, dto);
+   @Patch(':id/estado')
+   @UseGuards(JwtGuardia)
+    cambiarEstado(
+      @Param('id') id: string,
+      @Body() dto: CambiarEstadoDto,
+      @Req() req: any,
+    ) {
+      return this.equipoServicio.cambiarEstado(id, dto, {
+        id: req.user.id,
+        email: req.user.email,
+      });
   }
 }

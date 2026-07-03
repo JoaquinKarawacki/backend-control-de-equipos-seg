@@ -7,12 +7,17 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { EstadoReserva } from '@prisma/client';
 import { CrearReservaDto } from './dto/crear-reserva.dto';
+import { AuditoriaServicio, ACCIONES } from '../auditoria/auditoria.servicio';
+import { UsuarioActual } from '../comun/tipos/usuario-actual.tipo';
 
 @Injectable()
 export class ReservaServicio {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditoriaServicio: AuditoriaServicio,
+  ) {}
 
-  async crear(dto: CrearReservaDto) {
+  async crear(dto: CrearReservaDto, usuario: UsuarioActual) {
     const equipo = await this.prisma.equipo.findUnique({
       where: { id: dto.equipoId },
     });
@@ -48,10 +53,21 @@ export class ReservaServicio {
       throw new ConflictException('El equipo ya tiene una reserva en ese período');
     }
 
-    return this.prisma.reserva.create({ data: dto });
+    const reservaCreada = await this.prisma.reserva.create({ data: dto });
+
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.CREAR_RESERVA,
+      descripcion: `Creó una reserva para el equipo "${equipo.codigoInterno}" del ${dto.fechaDesde} al ${dto.fechaHasta}`,
+      entidad: 'Reserva',
+      entidadId: reservaCreada.id,
+    });
+
+    return reservaCreada;
   }
 
-  async confirmar(id: string) {
+  async confirmar(id: string, usuario: UsuarioActual) {
     const reserva = await this.prisma.reserva.findUnique({
       where: { id },
     });
@@ -64,7 +80,7 @@ export class ReservaServicio {
       throw new BadRequestException(`Solo se pueden confirmar reservas en estado PENDIENTE (estado actual: ${reserva.estado})`);
     }
 
-    await this.prisma.reserva.update({
+    const reservaConfirmada = await this.prisma.reserva.update({
       where: { id },
       data: { estado: 'CONFIRMADA' },
     });
@@ -74,10 +90,19 @@ export class ReservaServicio {
       data: { estado: 'RESERVADO' },
     });
 
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.CONFIRMAR_RESERVA,
+      descripcion: `Confirmó la reserva del equipo con id "${reserva.equipoId}"`,
+      entidad: 'Reserva',
+      entidadId: reservaConfirmada.id,
+    });
+
     return { mensaje: 'Reserva confirmada correctamente' };
   }
 
-  async cancelar(id: string) {
+  async cancelar(id: string, usuario: UsuarioActual) {
     const reserva = await this.prisma.reserva.findUnique({
       where: { id },
     });
@@ -90,7 +115,7 @@ export class ReservaServicio {
       throw new BadRequestException('Esta reserva ya fue cancelada o completada');
     }
 
-    await this.prisma.reserva.update({
+    const reservaCancelada = await this.prisma.reserva.update({
       where: { id },
       data: { estado: 'CANCELADA' },
     });
@@ -109,6 +134,15 @@ export class ReservaServicio {
         data: { estado: 'DISPONIBLE' },
       });
     }
+
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.CANCELAR_RESERVA,
+      descripcion: `Canceló la reserva del equipo con id "${reserva.equipoId}"`,
+      entidad: 'Reserva',
+      entidadId: reservaCancelada.id,
+    });
 
     return { mensaje: 'Reserva cancelada correctamente' };
   }

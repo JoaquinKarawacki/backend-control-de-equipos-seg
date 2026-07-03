@@ -8,14 +8,18 @@ import { CrearCalibracionDto } from './dto/crear-calibracion.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EVENTOS } from '../alertas/eventos/eventos.constantes';
 import { EventoCalibracionRegistrada } from '../alertas/eventos/eventos.tipos';
+import { AuditoriaServicio, ACCIONES } from '../auditoria/auditoria.servicio';
+import { UsuarioActual } from '../comun/tipos/usuario-actual.tipo';
 
 @Injectable()
 export class CalibracionServicio {
     constructor(
     private readonly prisma: PrismaService,
-    private readonly emisorEventos: EventEmitter2) {}
+    private readonly emisorEventos: EventEmitter2,
+    private readonly auditoriaServicio: AuditoriaServicio,
+  ) {}
 
-   async crear(dto: CrearCalibracionDto) {
+   async crear(dto: CrearCalibracionDto, usuario: UsuarioActual) {
     const equipo = await this.prisma.equipo.findUnique({
       where: { id: dto.equipoId },
     });
@@ -89,6 +93,15 @@ export class CalibracionServicio {
     };
     this.emisorEventos.emit(EVENTOS.CALIBRACION_REGISTRADA, payload);
 
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.REGISTRAR_CALIBRACION,
+      descripcion: `Registró una calibración para el equipo "${equipo.codigoInterno}" (vence el ${fechaVencimiento.toISOString().slice(0, 10)})`,
+      entidad: 'Calibracion',
+      entidadId: calibracion.id,
+    });
+
     return calibracion;
   }
 
@@ -123,7 +136,7 @@ export class CalibracionServicio {
     return calibracion;
   }
 
-    async anular(id: string, motivo: string) {
+    async anular(id: string, motivo: string, usuario: UsuarioActual) {
       const calibracion = await this.prisma.calibracion.findUnique({
         where: { id },
       });
@@ -134,9 +147,20 @@ export class CalibracionServicio {
       throw new BadRequestException('La calibración ya fue anulada');
     }
 
-    return this.prisma.calibracion.update({
+    const calibracionAnulada = await this.prisma.calibracion.update({
       where: { id },
       data: { anulada: true, motivoAnulacion: motivo },
     });
+
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.ANULAR_CALIBRACION,
+      descripcion: `Anuló la calibración del equipo con id "${calibracion.equipoId}" (motivo: "${motivo}")`,
+      entidad: 'Calibracion',
+      entidadId: calibracionAnulada.id,
+    });
+
+    return calibracionAnulada;
   }
 }

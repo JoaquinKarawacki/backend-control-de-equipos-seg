@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { JwtGuardia } from '../auth/jwt.guardia';
 import { MovimientosServicio } from './movimientos.servicio';
 import { RegistrarMovimientoDto } from './dto/registrar-movimiento.dto';
@@ -10,8 +10,11 @@ export class MovimientosControlador {
   constructor(private readonly movimientosServicio: MovimientosServicio) {}
 
   @Post()
-  registrarMovimiento(@Body() dto: RegistrarMovimientoDto) {
-    return this.movimientosServicio.registrarMovimiento(dto)
+  registrarMovimiento(@Body() dto: RegistrarMovimientoDto, @Req() req: any) {
+    return this.movimientosServicio.registrarMovimiento(dto, {
+      id: req.user.id,
+      email: req.user.email,
+    });
   }
 
   @Get()

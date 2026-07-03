@@ -12,15 +12,18 @@ import { CambiarEstadoDto } from './dto/cambiar-estado.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EVENTOS } from '../alertas/eventos/eventos.constantes';
 import { EventoEquipoEstadoCambiado } from '../alertas/eventos/eventos.tipos';
+import { AuditoriaServicio, ACCIONES } from '../auditoria/auditoria.servicio';
+import { UsuarioActual } from '../comun/tipos/usuario-actual.tipo';
 
 @Injectable()
 export class EquipoServicio {
-    constructor(
+  constructor(
     private readonly prisma: PrismaService,
-    private readonly emisorEventos: EventEmitter2) {}
+    private readonly emisorEventos: EventEmitter2,
+    private readonly auditoriaServicio: AuditoriaServicio,
+  ) {}
 
-  async crear(dto: CrearEquipoDto) {
-    // Verificar código interno único antes de intentar insertar
+  async crear(dto: CrearEquipoDto, usuario: UsuarioActual) {
     const equipoExistente = await this.prisma.equipo.findUnique({
       where: { codigoInterno: dto.codigoInterno },
     });
@@ -31,10 +34,9 @@ export class EquipoServicio {
       );
     }
 
-    return this.prisma.equipo.create({
+    const equipoCreado = await this.prisma.equipo.create({
       data: {
         ...dto,
-        // Convertimos los strings ISO a objetos Date para PostgreSQL
         fechaUltimaCalibracion: dto.fechaUltimaCalibracion
           ? new Date(dto.fechaUltimaCalibracion)
           : undefined,
@@ -43,6 +45,17 @@ export class EquipoServicio {
           : undefined,
       },
     });
+
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.CREAR_EQUIPO,
+      descripcion: `Creó el equipo "${equipoCreado.codigoInterno}" (${equipoCreado.descripcion})`,
+      entidad: 'Equipo',
+      entidadId: equipoCreado.id,
+    });
+
+    return equipoCreado;
   }
 
   async obtenerTodos(filtros: FiltrarEquiposDto) {
@@ -109,11 +122,9 @@ export class EquipoServicio {
     return equipo;
   }
 
-  async actualizar(id: string, dto: ActualizarEquipoDto) {
-    // Esto lanza NotFoundException si no existe — no necesitamos repetir la lógica
+  async actualizar(id: string, dto: ActualizarEquipoDto, usuario: UsuarioActual) {
     await this.obtenerPorId(id);
 
-    // Si cambia el código interno, verificar que no lo tenga otro equipo
     if (dto.codigoInterno) {
       const duplicado = await this.prisma.equipo.findFirst({
         where: {
@@ -129,7 +140,7 @@ export class EquipoServicio {
       }
     }
 
-    return this.prisma.equipo.update({
+    const equipoActualizado = await this.prisma.equipo.update({
       where: { id },
       data: {
         ...dto,
@@ -141,11 +152,20 @@ export class EquipoServicio {
           : undefined,
       },
     });
+
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.EDITAR_EQUIPO,
+      descripcion: `Editó el equipo "${equipoActualizado.codigoInterno}"`,
+      entidad: 'Equipo',
+      entidadId: equipoActualizado.id,
+    });
+
+    return equipoActualizado;
   }
 
- async cambiarEstado(id: string, dto: CambiarEstadoDto) {
-    // Guardamos el equipo ANTES de cambiarlo: necesitamos el estado anterior
-    // y sus datos para el payload del evento.
+async cambiarEstado(id: string, dto: CambiarEstadoDto, usuario: UsuarioActual) {
     const equipoAnterior = await this.obtenerPorId(id);
 
     const equipoActualizado = await this.prisma.equipo.update({
@@ -156,7 +176,6 @@ export class EquipoServicio {
       },
     });
 
-    // El cambio ya está persistido. Recién ahora avisamos al resto del sistema.
     const payload: EventoEquipoEstadoCambiado = {
       equipoId: equipoActualizado.id,
       codigoInterno: equipoActualizado.codigoInterno,
@@ -166,6 +185,15 @@ export class EquipoServicio {
     };
 
     this.emisorEventos.emit(EVENTOS.EQUIPO_ESTADO_CAMBIADO, payload);
+
+    await this.auditoriaServicio.registrar({
+      usuarioId: usuario.id,
+      usuarioEmail: usuario.email,
+      accion: ACCIONES.CAMBIAR_ESTADO_EQUIPO,
+      descripcion: `Cambió el estado de "${equipoActualizado.codigoInterno}" de ${equipoAnterior.estado} a ${equipoActualizado.estado}`,
+      entidad: 'Equipo',
+      entidadId: equipoActualizado.id,
+    });
 
     return equipoActualizado;
   }
