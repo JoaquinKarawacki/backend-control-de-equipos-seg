@@ -17,7 +17,7 @@ export class UsuarioServicio{
         private readonly auditoriaServicio: AuditoriaServicio,
     ) {}
 
-    async crear(dto: CrearUsuarioDto){
+   async crear(dto: CrearUsuarioDto, usuario: UsuarioActual){
         const usuarioExistente = await this.prisma.usuario.findUnique({
             where : {email: dto.email}
         });
@@ -28,29 +28,27 @@ export class UsuarioServicio{
 
        const contrasenaHasheada = await bcrypt.hash(dto.contrasena, 10);
 
-        const usuario = await this.prisma.usuario.create({
+        const usuarioCreado = await this.prisma.usuario.create({
             data: {
                 ...dto,
                 contrasena: contrasenaHasheada,
             },
         });
 
-        // No hay usuario autenticado (endpoint sin guard todavía):
-        // se audita usando al propio usuario creado como actor.
         await this.auditoriaServicio.registrar({
             usuarioId: usuario.id,
             usuarioEmail: usuario.email,
             accion: ACCIONES.CREAR_USUARIO,
-            descripcion: `Se registró el usuario "${usuario.email}" (rol: ${usuario.rol})`,
+            descripcion: `Creó el usuario "${usuarioCreado.email}" (rol: ${usuarioCreado.rol})`,
             entidad: 'Usuario',
-            entidadId: usuario.id,
+            entidadId: usuarioCreado.id,
         });
 
-        const { contrasena, ...usuarioSinContrasena } = usuario;
+        const { contrasena, ...usuarioSinContrasena } = usuarioCreado;
 
         return usuarioSinContrasena;
     }
-
+    
     async obtenerTodos() {
         return this.prisma.usuario.findMany({
             select: {

@@ -19,6 +19,9 @@ import type { Response } from 'express';
 import { DocumentosServicio } from './documentos.servicio';
 import { SubirDocumentoDto } from './dto/subir-documento.dto';
 import { JwtGuardia } from '../auth/jwt.guardia';
+import { RolesGuardia } from '../comun/guards/roles.guardia';
+import { Roles } from '../comun/decoradores/roles.decorador';
+import { RolUsuario } from '@prisma/client';
 
 // Tipos MIME permitidos. Incluyo los de celular (jpeg, png, heic) + pdf.
 const TIPOS_PERMITIDOS = [
@@ -32,12 +35,13 @@ const TIPOS_PERMITIDOS = [
 // Límite de tamaño: 10 MB en bytes.
 const TAMANO_MAXIMO = 10 * 1024 * 1024;
 
-@Controller('api/documentos')
+@Controller('documentos')
 export class DocumentosControlador {
   constructor(private readonly documentosServicio: DocumentosServicio) {}
 
   @Post()
-  @UseGuards(JwtGuardia)
+  @UseGuards(JwtGuardia, RolesGuardia)
+  @Roles(RolUsuario.ADMIN, RolUsuario.TECNICO)
   @UseInterceptors(
     FileInterceptor('archivo', {
       storage: memoryStorage(),
@@ -56,10 +60,6 @@ export class DocumentosControlador {
       },
     }),
   )
-
-  @Post()
-  @UseGuards(JwtGuardia)
-  @UseInterceptors(/* ...el FileInterceptor tal cual lo tenés... */)
   async subir(
     @UploadedFile() archivo: Express.Multer.File,
     @Body() dto: SubirDocumentoDto,
@@ -98,7 +98,8 @@ export class DocumentosControlador {
   }
 
   @Delete(':id')
-  @UseGuards(JwtGuardia)
+  @UseGuards(JwtGuardia, RolesGuardia)
+  @Roles(RolUsuario.ADMIN)
   async eliminar(@Param('id') id: string, @Req() req: any) {
     return this.documentosServicio.eliminar(id, {
       id: req.user.id,

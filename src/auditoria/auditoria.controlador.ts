@@ -2,7 +2,7 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuditoriaServicio } from './auditoria.servicio';
 import { JwtGuardia } from '../auth/jwt.guardia';
 
-@Controller('api/auditoria')
+@Controller('auditoria')
 export class AuditoriaControlador {
   constructor(private readonly auditoriaServicio: AuditoriaServicio) {}
 

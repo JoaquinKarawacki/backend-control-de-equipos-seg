@@ -10,6 +10,9 @@ import {
   Req,
 } from '@nestjs/common';
 import { JwtGuardia } from '../auth/jwt.guardia';
+import { RolesGuardia } from '../comun/guards/roles.guardia';
+import { Roles } from '../comun/decoradores/roles.decorador';
+import { RolUsuario } from '@prisma/client';
 import { ReservaServicio } from './reservas.servicio';
 import { CrearReservaDto } from './dto/crear-reserva.dto';
 import { EstadoReserva } from '@prisma/client';
@@ -19,7 +22,8 @@ export class ReservaControlador {
   constructor(private readonly reservaServicio: ReservaServicio) {}
 
   @Post()
-  @UseGuards(JwtGuardia)
+  @UseGuards(JwtGuardia, RolesGuardia)
+  @Roles(RolUsuario.ADMIN, RolUsuario.TECNICO)
   crear(@Body() dto: CrearReservaDto, @Req() req: any) {
     return this.reservaServicio.crear(dto, {
       id: req.user.id,
@@ -28,7 +32,8 @@ export class ReservaControlador {
   }
 
   @Patch(':id/confirmar')
-  @UseGuards(JwtGuardia)
+  @UseGuards(JwtGuardia, RolesGuardia)
+  @Roles(RolUsuario.ADMIN, RolUsuario.TECNICO)
   confirmar(@Param('id') id: string, @Req() req: any) {
     return this.reservaServicio.confirmar(id, {
       id: req.user.id,
@@ -37,7 +42,8 @@ export class ReservaControlador {
   }
 
   @Patch(':id/cancelar')
-  @UseGuards(JwtGuardia)
+  @UseGuards(JwtGuardia, RolesGuardia)
+  @Roles(RolUsuario.ADMIN, RolUsuario.TECNICO)
   cancelar(@Param('id') id: string, @Req() req: any) {
     return this.reservaServicio.cancelar(id, {
       id: req.user.id,

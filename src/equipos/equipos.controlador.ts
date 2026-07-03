@@ -3,6 +3,9 @@ import {
   UseGuards, Req,
 } from '@nestjs/common';
 import { JwtGuardia } from '../auth/jwt.guardia';
+import { RolesGuardia } from '../comun/guards/roles.guardia';
+import { Roles } from '../comun/decoradores/roles.decorador';
+import { RolUsuario } from '@prisma/client';
 import { EquipoServicio } from './equipos.servicio';
 import { CrearEquipoDto } from './dto/crear-equipo.dto';
 import { ActualizarEquipoDto } from './dto/actualizar-equipo.dto';
@@ -14,7 +17,8 @@ export class EquipoControlador {
   constructor(private readonly equipoServicio: EquipoServicio) {}
 
   @Post()
-  @UseGuards(JwtGuardia)
+  @UseGuards(JwtGuardia, RolesGuardia)
+  @Roles(RolUsuario.ADMIN)
   crearEquipo(@Body() dto: CrearEquipoDto, @Req() req: any) {
     return this.equipoServicio.crear(dto, {
       id: req.user.id,
@@ -41,7 +45,8 @@ export class EquipoControlador {
   }
 
   @Patch(':id')
-  @UseGuards(JwtGuardia)
+  @UseGuards(JwtGuardia, RolesGuardia)
+  @Roles(RolUsuario.ADMIN)
     actualizarEquipo(
       @Param('id') id: string,
       @Body() dto: ActualizarEquipoDto,
@@ -54,7 +59,8 @@ export class EquipoControlador {
     }
 
    @Patch(':id/estado')
-   @UseGuards(JwtGuardia)
+   @UseGuards(JwtGuardia, RolesGuardia)
+   @Roles(RolUsuario.ADMIN, RolUsuario.TECNICO)
     cambiarEstado(
       @Param('id') id: string,
       @Body() dto: CambiarEstadoDto,
