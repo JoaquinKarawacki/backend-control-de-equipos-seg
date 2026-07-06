@@ -10,6 +10,7 @@ import { ReservaModulo } from './reservas/reservas.modulo';
 import { CalibracionModulo } from './calibraciones/calibraciones.modulo';
 import { MovimientosModulo } from './movimientos/movimientos.modulo';
 import { AlertasModulo } from './alertas/alertas.modulo';
+import { DocumentosModulo } from './documentos/documentos.modulo';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AlertasModulo } from './alertas/alertas.modulo';
     CalibracionModulo,
     MovimientosModulo,
     AlertasModulo,
+    DocumentosModulo,
   ],
 })
 export class AppModule {}
