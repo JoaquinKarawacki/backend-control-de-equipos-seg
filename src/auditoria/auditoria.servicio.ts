@@ -24,6 +24,7 @@ export const ACCIONES = {
   // Usuarios
   CREAR_USUARIO: 'CREAR_USUARIO',
   EDITAR_USUARIO: 'EDITAR_USUARIO',
+  CAMBIAR_CONTRASENA_PROPIA: 'CAMBIAR_CONTRASENA_PROPIA',
 } as const;
 
 // Los datos que recibe registrar(). Objeto en vez de params sueltos,

@@ -1,11 +1,17 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { EstadoEquipo, EstadoReserva, MovimientoEquipo, TipoMovimiento } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { EVENTOS } from '../../alertas/eventos/eventos.constantes';
+import { EventoEquipoDevuelto } from '../../alertas/eventos/eventos.tipos';
 import { MovimientoEstrategia, ParametrosMovimiento } from './movimiento.estrategia';
 
 @Injectable()
 export class DevolucionEstrategia implements MovimientoEstrategia {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emisorEventos: EventEmitter2,
+  ) {}
 
   async ejecutar(params: ParametrosMovimiento): Promise<MovimientoEquipo> {
 
@@ -32,7 +38,7 @@ export class DevolucionEstrategia implements MovimientoEstrategia {
 
     const nuevoEstado = reservaActiva ? EstadoEquipo.RESERVADO : EstadoEquipo.DISPONIBLE;
     
-    return this.prisma.$transaction(async (tx) => {
+    const movimiento = await this.prisma.$transaction(async (tx) => {
         await tx.equipo.update({
             where: { id: equipoId },
             data: { estado: nuevoEstado },
@@ -51,5 +57,10 @@ export class DevolucionEstrategia implements MovimientoEstrategia {
             },
         });
     });
+
+    const payload: EventoEquipoDevuelto = { equipoId };
+    this.emisorEventos.emit(EVENTOS.EQUIPO_DEVUELTO, payload);
+
+    return movimiento;
   }
 }

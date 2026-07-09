@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsDateString } from 'class-validator';
 import { TipoMovimiento } from '@prisma/client';
 
 export class RegistrarMovimientoDto {
@@ -8,4 +8,6 @@ export class RegistrarMovimientoDto {
   @IsString() @IsOptional() reservaId?: string;
   @IsString() @IsOptional() proyectoAsociado?: string;
   @IsString() @IsOptional() observaciones?: string;
+  // Solo se usa (y se exige) en un RETIRO sin reservaId — ver RetiroEstrategia.
+  @IsDateString() @IsOptional() fechaDevolucionEsperada?: string;
 }

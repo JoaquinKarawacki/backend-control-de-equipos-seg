@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ThrottlerModule } from '@nestjs/throttler';
 import type { StringValue } from 'ms';
 import { AuthControlador } from './auth.controlador';
 import { AuthServicio } from './auth.servicio';
@@ -16,6 +17,8 @@ import { JwtGuardia } from './jwt.guardia';
         signOptions: { expiresIn: (process.env.JWT_EXPIRA_EN ?? '7d') as any },
         }),
     }),
+    // Límite de intentos de login: 5 cada 60s por IP, para frenar fuerza bruta.
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 5 }]),
   ],
   controllers: [AuthControlador],
   providers: [AuthServicio, JwtEstrategia, JwtGuardia],

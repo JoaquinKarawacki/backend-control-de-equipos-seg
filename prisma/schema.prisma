@@ -148,6 +148,11 @@ model MovimientoEquipo {
   observaciones     String?
   creadoEn          DateTime       @default(now())
 
+  // Solo aplica a un RETIRO sin reservaId: fecha en la que se espera que
+  // el equipo vuelva. Si el retiro viene de una reserva, la fecha límite
+  // es reserva.fechaHasta y este campo queda vacío.
+  fechaDevolucionEsperada DateTime?
+
   // Relaciones
   equipoId  String
   equipo    Equipo  @relation(fields: [equipoId], references: [id])

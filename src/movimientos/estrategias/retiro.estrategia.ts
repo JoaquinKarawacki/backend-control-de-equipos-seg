@@ -8,7 +8,7 @@ export class RetiroEstrategia implements MovimientoEstrategia {
   constructor(private readonly prisma: PrismaService) {}
 
   async ejecutar(params: ParametrosMovimiento): Promise<MovimientoEquipo> {
-    const { equipoId, tecnicoId, reservaId, proyectoAsociado, observaciones } = params;
+    const { equipoId, tecnicoId, reservaId, proyectoAsociado, observaciones, fechaDevolucionEsperada } = params;
 
     const equipo = await this.prisma.equipo.findUnique({
             where : {id: equipoId}
@@ -22,19 +22,26 @@ export class RetiroEstrategia implements MovimientoEstrategia {
         throw new BadRequestException('El equipo no esta disponible')
     }
 
-    if(reservaId){ 
+    if(reservaId){
         const reserva = await this.prisma.reserva.findUnique({
             where : {
                 id: reservaId
             }
-        })     
-        
+        })
+
         if(!reserva){
             throw new NotFoundException('La reserva no existe')
         }else if(reserva.equipoId !== equipoId){
             throw new BadRequestException('La reserva no pertenece al equipo')
         }
+    } else if (!fechaDevolucionEsperada) {
+        // Sin reserva no hay ninguna fecha límite guardada en otro lado —
+        // sin esto, el retiro queda "en uso" para siempre sin poder avisar de un atraso.
+        throw new BadRequestException(
+            'Si el retiro no está ligado a una reserva, indicá una fecha de devolución esperada.',
+        );
     }
+
     return this.prisma.$transaction(async (tx) => {
   await tx.equipo.update({
     where: { id: equipoId },
@@ -58,6 +65,7 @@ export class RetiroEstrategia implements MovimientoEstrategia {
             observaciones,
             estadoAnterior: equipo.estado,
             estadoNuevo: EstadoEquipo.EN_USO,
+            fechaDevolucionEsperada: reservaId ? null : new Date(fechaDevolucionEsperada!),
             },
         });
     });

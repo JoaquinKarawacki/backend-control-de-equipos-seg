@@ -20,9 +20,13 @@ async function bootstrap() {
     }),
   );
 
-  // CORS abierto por ahora para desarrollo local
-  // En producción esto se restringe al dominio del frontend
-  app.enableCors();
+  // En producción solo el frontend puede pegarle a la API.
+  // En desarrollo, si no está seteado FRONTEND_URL, queda abierto.
+  app.enableCors(
+    process.env.NODE_ENV === 'production'
+      ? { origin: process.env.FRONTEND_URL, credentials: true }
+      : undefined,
+  );
 
   const puerto = process.env.PORT ?? 3000;
   await app.listen(puerto);

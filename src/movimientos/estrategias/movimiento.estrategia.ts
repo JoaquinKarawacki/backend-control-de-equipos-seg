@@ -6,6 +6,7 @@ export interface ParametrosMovimiento {
   reservaId?: string;
   proyectoAsociado?: string;
   observaciones?: string;
+  fechaDevolucionEsperada?: string;
 }
 
 export interface MovimientoEstrategia {

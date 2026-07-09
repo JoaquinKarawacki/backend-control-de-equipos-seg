@@ -11,6 +11,16 @@ import { EventoCalibracionRegistrada } from '../alertas/eventos/eventos.tipos';
 import { AuditoriaServicio, ACCIONES } from '../auditoria/auditoria.servicio';
 import { UsuarioActual } from '../comun/tipos/usuario-actual.tipo';
 
+// Select de quien registró la calibración sin la contraseña — estos
+// endpoints son públicos (ficha por QR), nunca hay que devolver el hash acá.
+const SELECT_REGISTRADA_POR = {
+  id: true,
+  nombre: true,
+  apellido: true,
+  email: true,
+  rol: true,
+} as const;
+
 @Injectable()
 export class CalibracionServicio {
     constructor(
@@ -114,7 +124,7 @@ export class CalibracionServicio {
         },
         include: {
           equipo: true,
-          registradaPor: true,
+          registradaPor: { select: SELECT_REGISTRADA_POR },
         },
         orderBy: {
           fechaRealizada: 'desc',
@@ -127,7 +137,7 @@ export class CalibracionServicio {
       where: { id },
       include: {
         equipo: true,
-        registradaPor: true,
+        registradaPor: { select: SELECT_REGISTRADA_POR },
       },
     });
 
@@ -147,9 +157,28 @@ export class CalibracionServicio {
       throw new BadRequestException('La calibración ya fue anulada');
     }
 
-    const calibracionAnulada = await this.prisma.calibracion.update({
-      where: { id },
-      data: { anulada: true, motivoAnulacion: motivo },
+    const calibracionAnulada = await this.prisma.$transaction(async (tx) => {
+      const anulada = await tx.calibracion.update({
+        where: { id },
+        data: { anulada: true, motivoAnulacion: motivo },
+      });
+
+      // La calibración anulada deja de ser válida: el equipo tiene que reflejar
+      // la última calibración vigente que quede (o ninguna, si no queda ninguna).
+      const ultimaVigente = await tx.calibracion.findFirst({
+        where: { equipoId: calibracion.equipoId, anulada: false },
+        orderBy: { fechaRealizada: 'desc' },
+      });
+
+      await tx.equipo.update({
+        where: { id: calibracion.equipoId },
+        data: {
+          fechaUltimaCalibracion: ultimaVigente?.fechaRealizada ?? null,
+          vencimientoCalibracion: ultimaVigente?.fechaVencimiento ?? null,
+        },
+      });
+
+      return anulada;
     });
 
     await this.auditoriaServicio.registrar({

@@ -35,6 +35,10 @@ export class DocumentosServicio {
       throw new BadRequestException('No se recibió ningún archivo.');
     }
 
+    // Multer/busboy decodifica el nombre del archivo como latin1 aunque el
+    // navegador lo mande en UTF-8 (bug conocido) — lo reinterpretamos acá.
+    archivo.originalname = Buffer.from(archivo.originalname, 'latin1').toString('utf8');
+
     const equipo = await this.prisma.equipo.findUnique({
       where: { id: dto.equipoId },
     });

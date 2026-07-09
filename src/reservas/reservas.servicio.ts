@@ -10,6 +10,16 @@ import { CrearReservaDto } from './dto/crear-reserva.dto';
 import { AuditoriaServicio, ACCIONES } from '../auditoria/auditoria.servicio';
 import { UsuarioActual } from '../comun/tipos/usuario-actual.tipo';
 
+// Select del técnico sin la contraseña — estos endpoints son públicos
+// (ficha por QR), nunca hay que devolver el hash acá.
+const SELECT_TECNICO = {
+  id: true,
+  nombre: true,
+  apellido: true,
+  email: true,
+  rol: true,
+} as const;
+
 @Injectable()
 export class ReservaServicio {
   constructor(
@@ -152,7 +162,7 @@ export class ReservaServicio {
       where: { id },
       include: {
         equipo: true,
-        tecnico: true,
+        tecnico: { select: SELECT_TECNICO },
       },
     });
 
@@ -172,7 +182,7 @@ export class ReservaServicio {
       },
       include: {
         equipo: true,
-        tecnico: true,
+        tecnico: { select: SELECT_TECNICO },
       },
     });
   }

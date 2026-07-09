@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { CrearUsuarioDto } from './dto/crear-usuario.dto';
 import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
+import { CambiarContrasenaDto } from './dto/cambiar-contrasena.dto';
 import { UsuarioServicio } from './usuarios.servicio';
 import { JwtGuardia } from '../auth/jwt.guardia';
 import { RolesGuardia } from '../comun/guards/roles.guardia';
@@ -37,7 +38,14 @@ export class UsuarioControlador{
         return this.usuarioServicio.obtenerTodos();
     }
 
+    @Patch('me/contrasena')
+    @UseGuards(JwtGuardia)
+    cambiarContrasenaPropia(@Body() dto: CambiarContrasenaDto, @Req() req: any){
+        return this.usuarioServicio.cambiarContrasenaPropia(req.user.id, dto);
+    }
+
     @Get(':id')
+    @UseGuards(JwtGuardia)
     obtenerPorId(@Param('id') id: string){
         return this.usuarioServicio.obtenerPorId(id);
     }

@@ -2,11 +2,13 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CrearUsuarioDto } from './dto/crear-usuario.dto';
 import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
+import { CambiarContrasenaDto } from './dto/cambiar-contrasena.dto';
 import { AuditoriaServicio, ACCIONES } from '../auditoria/auditoria.servicio';
 import { UsuarioActual } from '../comun/tipos/usuario-actual.tipo';
 
@@ -114,7 +116,40 @@ export class UsuarioServicio{
             entidadId: usuarioActualizado.id,
         });
 
-        return usuarioActualizado;
+        const { contrasena, ...usuarioSinContrasena } = usuarioActualizado;
+        return usuarioSinContrasena;
+    }
+
+    async cambiarContrasenaPropia(id: string, dto: CambiarContrasenaDto) {
+        const usuario = await this.prisma.usuario.findUnique({ where: { id } });
+
+        if (!usuario) {
+            throw new NotFoundException('No existe un usuario con ese ID');
+        }
+
+        const contrasenaValida = await bcrypt.compare(dto.contrasenaActual, usuario.contrasena);
+
+        if (!contrasenaValida) {
+            throw new UnauthorizedException('La contraseña actual no es correcta');
+        }
+
+        const contrasenaHasheada = await bcrypt.hash(dto.contrasenaNueva, 10);
+
+        await this.prisma.usuario.update({
+            where: { id },
+            data: { contrasena: contrasenaHasheada },
+        });
+
+        await this.auditoriaServicio.registrar({
+            usuarioId: usuario.id,
+            usuarioEmail: usuario.email,
+            accion: ACCIONES.CAMBIAR_CONTRASENA_PROPIA,
+            descripcion: `Cambió su propia contraseña`,
+            entidad: 'Usuario',
+            entidadId: usuario.id,
+        });
+
+        return { mensaje: 'Contraseña actualizada correctamente' };
     }
 
 }
