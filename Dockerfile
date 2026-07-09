@@ -1,6 +1,10 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 
+# Cache-bust: cambiar este valor fuerza a Railway a reconstruir todo lo
+# que sigue en vez de reusar capas cacheadas de builds anteriores.
+RUN echo "cache-bust-2026-07-09-01"
+
 # bcrypt compila un addon nativo — hacen falta estas herramientas si no hay
 # binario prearmado para esta plataforma (musl/alpine).
 RUN apk add --no-cache python3 make g++
@@ -11,6 +15,9 @@ RUN npm ci
 
 COPY . .
 RUN npm run build
+# Falla el build acá mismo (con log claro) si nest build no generó el
+# entrypoint, en vez de descubrirlo recién al arrancar el contenedor.
+RUN ls -la dist/ && test -f dist/src/main.js
 RUN npm prune --omit=dev
 
 FROM node:24-alpine AS runtime
