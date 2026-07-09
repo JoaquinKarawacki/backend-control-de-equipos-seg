@@ -1,29 +1,22 @@
 import {
   Controller,
   Get,
-  Post,
   Patch,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtGuardia } from '../auth/jwt.guardia';
+import { RolesGuardia } from '../comun/guards/roles.guardia';
+import { Roles } from '../comun/decoradores/roles.decorador';
+import { RolUsuario } from '@prisma/client';
 import { AlertasServicio } from './alertas.servicio';
 import { FiltrarAlertasDto } from './dto/filtrar-alertas.dto';
-import { AlertasProgramador } from './alertas.programador';
 
 @Controller('alertas')
+@UseGuards(JwtGuardia)
 export class AlertasControlador {
-  constructor(
-    private readonly alertasServicio: AlertasServicio,
-    private readonly programador: AlertasProgramador,
-  ) {}
-
-  // ⚠️ TEMPORAL — SOLO PARA PRUEBAS. Borrar antes de deployar.
-  // Dispara la verificación diaria manualmente sin esperar al cron.
-  @Post('probar-verificacion')
-  async probarVerificacion() {
-    await this.programador.verificarTodo();
-    return { mensaje: 'Verificación ejecutada. Revisá GET /api/alertas' };
-  }
+  constructor(private readonly alertasServicio: AlertasServicio) {}
 
   // GET /api/alertas?tipo=...&leida=...&resuelta=...&equipoId=...
   @Get()
@@ -33,12 +26,16 @@ export class AlertasControlador {
 
   // PATCH /api/alertas/:id/leer
   @Patch(':id/leer')
+  @UseGuards(RolesGuardia)
+  @Roles(RolUsuario.ADMIN, RolUsuario.TECNICO)
   marcarLeida(@Param('id') id: string) {
     return this.alertasServicio.marcarLeida(id);
   }
 
   // PATCH /api/alertas/:id/resolver
   @Patch(':id/resolver')
+  @UseGuards(RolesGuardia)
+  @Roles(RolUsuario.ADMIN, RolUsuario.TECNICO)
   marcarResuelta(@Param('id') id: string) {
     return this.alertasServicio.marcarResuelta(id);
   }
