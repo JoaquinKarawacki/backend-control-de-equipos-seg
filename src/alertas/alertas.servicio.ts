@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { FiltrarAlertasDto } from './dto/filtrar-alertas.dto';
 import { TipoAlerta } from '@prisma/client';
 import { EVENTOS } from './eventos/eventos.constantes';
+import { CorreoServicio } from '../correo/correo.servicio';
 import type {
   EventoEquipoEstadoCambiado,
   EventoCalibracionRegistrada,
@@ -12,7 +13,10 @@ import type {
 
 @Injectable()
 export class AlertasServicio {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly correoServicio: CorreoServicio,
+  ) {}
 
   // Única puerta de entrada para crear alertas. Si ya existe una activa
   // (resuelta: false) del mismo tipo para el mismo equipo, no hace nada.
@@ -27,13 +31,31 @@ export class AlertasServicio {
 
     if (alerta) return;
 
-    return this.prisma.alerta.create({
+    const alertaCreada = await this.prisma.alerta.create({
       data: {
         tipo: tipo,
         equipoId: equipoId,
         mensaje: mensaje,
       },
     });
+
+    await this.notificarPorCorreo(mensaje);
+
+    return alertaCreada;
+  }
+
+  // Avisa por mail a administradores y técnicos cada vez que se crea una alerta nueva.
+  private async notificarPorCorreo(mensaje: string) {
+    const usuarios = await this.prisma.usuario.findMany({
+      where: { rol: { in: ['ADMIN', 'TECNICO'] }, activo: true },
+      select: { email: true },
+    });
+
+    await this.correoServicio.enviar(
+      usuarios.map((usuario) => usuario.email),
+      'Nueva alerta - Control de Equipos SEG',
+      `<p>${mensaje}</p>`,
+    );
   }
 
   // Marca como resueltas todas las alertas activas de los tipos indicados
